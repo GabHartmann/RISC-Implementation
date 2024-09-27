@@ -1,5 +1,6 @@
 # RISC-Implementation
- Simulation of a basic Havard processor
+ Havard processor simulator
  -
  -
- 
+ ---------
+ Trabalho do Grau A para acadeira de Organização e Arquitetura de Computadores
