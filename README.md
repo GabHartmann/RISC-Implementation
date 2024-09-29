@@ -3,4 +3,4 @@
  -
  -
  ---------
- Trabalho do Grau A para acadeira de Organização e Arquitetura de Computadores
+ Trabalho do Grau A para a cadeira de Organização e Arquitetura de Computadores
