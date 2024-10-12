@@ -6,32 +6,47 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class InstructionMemory {
-    private String[] instructions;
+    List<String> instructions;
 
     public InstructionMemory(File file) {
-        List<String> lines = new ArrayList<>();
+        instructions = new ArrayList<String>();
 
         try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
             String line;
 
             while ((line = reader.readLine()) != null) {
-                lines.add(line);
+                // String[] result = line.split(" ");
+                // String opcode = result[0];
+
+                // if(result.length == 4) {
+                //     int oper1 = Integer.parseInt(result[1].replaceAll("\\D", ""));
+                //     int oper2 = Integer.parseInt(result[2].replaceAll("\\D", ""));
+                //     int oper3 = Integer.parseInt(result[3].replaceAll("\\D", ""));
+
+                //     instructions.add(new Instruction(opcode, oper1, oper2, oper3)); 
+                // } else {
+                //     instructions.add(new Instruction(opcode, 0, 0, 0));
+                // }
+
+                instructions.add(line);
             }
         } catch (IOException e) {
             e.printStackTrace();
         }
-
-        instructions = lines.toArray(new String[0]);
     }
 
-    public void getInstructions() {
+    public String getInstruction(int index) {
+        return instructions.get(index);
+    }
+
+    public void printInstructions() {
         for (String instruction : instructions) {
             System.out.println(instruction);
         }
     }
 
     public static void main(String[] args) {
-
+        InstructionMemory instructionMemory = new InstructionMemory(new File("src/input.txt"));
+        instructionMemory.printInstructions();
     }
-
 }
