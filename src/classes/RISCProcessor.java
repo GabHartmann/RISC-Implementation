@@ -6,8 +6,14 @@ import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Queue;
+import java.util.HashMap;
+
+import enums.Prediction;
 
 public class RISCProcessor {
+    Prediction prediction;
+    HashMap<Integer, Integer> branchAddressesHistory;
+    HashMap<Integer, Integer> phtTable;
     static File PROGRAM_PATH = new File("src/input.txt");
     List<String> instructionMemory;
     int[] dataMemory; 
@@ -18,7 +24,15 @@ public class RISCProcessor {
     String if_id;
     Instruction id_ex, ex_mem, mem_wb;
 
-    public RISCProcessor() {
+    public RISCProcessor(Prediction prediction) {
+        this.prediction = prediction;
+
+        if(prediction.equals(Prediction.PHT)) {
+            branchAddressesHistory = new HashMap<>();
+            phtTable = new HashMap<>();
+        }
+
+        programCounter = 1;
         instructionMemory = new ArrayList<>();
         dataMemory = new int[32];
         registers = new int[32];
@@ -31,7 +45,10 @@ public class RISCProcessor {
         try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
             String line;
 
+            instructionMemory.add(null);
+
             while ((line = reader.readLine()) != null) {
+                
                 instructionMemory.add(line);
             }
         } catch (IOException e) {
@@ -53,18 +70,18 @@ public class RISCProcessor {
         if (mem_wb != null) {
             String opcode = mem_wb.getOpcode();
 
-            if(opcode.equalsIgnoreCase("ADD")) {
+            if(opcode.equalsIgnoreCase("ADD") && mem_wb.isValid()) {
                 // add R2 R1 R2
                 registers[mem_wb.getOper1()] = alu.remove();
-            } else if(opcode.equalsIgnoreCase("SUB")) {
+            } else if(opcode.equalsIgnoreCase("SUB") && mem_wb.isValid()) {
                 // sub R2 R1 R2
                 registers[mem_wb.getOper1()] = alu.remove();
-            } else if(opcode.equalsIgnoreCase("LW")) {
+            } else if(opcode.equalsIgnoreCase("LW") && mem_wb.isValid()) {
                 //lw R0 R1 -1
                 int address = alu.poll();
 
                 registers[address] = dataMemory[address];
-            } else if(opcode.equalsIgnoreCase("SW")) {
+            } else if(opcode.equalsIgnoreCase("SW") && mem_wb.isValid()) {
                 // TODO SW writeBack
             }
 
@@ -74,13 +91,13 @@ public class RISCProcessor {
 
     private void memoryAccess() {
         if(ex_mem != null) {
-            if(ex_mem.getOpcode().equalsIgnoreCase("LW")) {
+            if(ex_mem.getOpcode().equalsIgnoreCase("LW") && ex_mem.isValid()) {
                 // lw R0 R1 -1   (offset, address, value)
                 int address = alu.peek();
 
                 dataMemory[address] = ex_mem.getOper3();
                 readValue = dataMemory[address];
-            } else if(ex_mem.getOpcode().equalsIgnoreCase("SW")) {
+            } else if(ex_mem.getOpcode().equalsIgnoreCase("SW") && ex_mem.isValid()) {
                 dataMemory[ex_mem.getOper3()] = ex_mem.getOper3();
             }
 
@@ -101,11 +118,17 @@ public class RISCProcessor {
                 alu.add(id_ex.getOper2() - id_ex.getOper3());
             } else if(opcode.equalsIgnoreCase("BEQ")) {
                 // beq R0 R0 5
-                if(id_ex.getOper1() == id_ex.getOper1()) {
+                if(id_ex.getOper1() == id_ex.getOper2()) {
+                    if(prediction.equals(Prediction.PHT)) {
+                        int xor = programCounter ^ branchAddressesHistory.get(programCounter);
+                    }
+
                     programCounter = id_ex.getOper3();
 
-                    //TODO set all previous instructions to false
+                    mem_wb.setValid(false);
 
+                    if_id = null;
+                    id_ex.setValid(false);
                 }
             } else if (opcode.equalsIgnoreCase("LW")) {
                 // lw R0 R1 -1
@@ -114,6 +137,8 @@ public class RISCProcessor {
                 alu.add(offset + id_ex.getOper2());
             } else if(opcode.equalsIgnoreCase("SW")) {
                 // TODO SW
+                // sw R0 R1
+
             } else if(opcode.equalsIgnoreCase("NOOP")) {
                 // does nothing
             } else if(opcode.equalsIgnoreCase("HALT")) {
@@ -149,6 +174,7 @@ public class RISCProcessor {
     
                     id_ex = new Instruction(opcode, oper1, oper2, oper3);
                 } else if(opcode.equalsIgnoreCase("ADD")) {
+                    // add R3 R1 R2
                     oper1 = Integer.parseInt(splitedInstruction[1].substring(1));
                     oper2 = registers[Integer.parseInt(splitedInstruction[2].substring(1))];
                     oper3 = registers[Integer.parseInt(splitedInstruction[3].substring(1))];
@@ -161,6 +187,10 @@ public class RISCProcessor {
     
                     id_ex = new Instruction(opcode, oper1, oper2, oper3);
                 } else if(opcode.equalsIgnoreCase("BEQ")) {
+                    if(prediction.equals(Prediction.PHT)) {
+                        branchAddressesHistory.put(programCounter, 0);
+                    }
+
                     oper1 = registers[Integer.parseInt(splitedInstruction[1].substring(1))];
                     oper2 = registers[Integer.parseInt(splitedInstruction[2].substring(1))];
                     oper3 = Integer.parseInt(splitedInstruction[3]);
@@ -176,8 +206,10 @@ public class RISCProcessor {
     }
 
     private void instructionFetch() {
+
+
         if_id = instructionMemory.get(programCounter++);
-     }
+    }
 
     public void printRegisters() {
         System.out.println("Registers:");
@@ -195,7 +227,7 @@ public class RISCProcessor {
     }
 
     public static void main(String[] args) {
-        RISCProcessor processor = new RISCProcessor();
+        RISCProcessor processor = new RISCProcessor(Prediction.PHT);
         processor.run();
         processor.printRegisters();
         processor.printMemory();
