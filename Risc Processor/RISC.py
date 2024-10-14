@@ -133,7 +133,7 @@ def print_register_status():
 
 def pipeline():
     global program_memory, halt_flag
-    with open('programa.txt', 'r') as file:
+    with open('Risc Processor\programa.txt', 'r') as file:
         program_memory = [line.strip() for line in file]
 
     initialize_data_memory()
