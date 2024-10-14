@@ -8,6 +8,8 @@ ID_EX = {}
 EX_MEM = {}
 MEM_WB = {}
 
+prediction_table = {}
+
 program_counter = 0
 halt_flag = False
 
@@ -48,7 +50,7 @@ def memory_access():
             MEM_WB["write_value"] = EX_MEM.get("execution_result")
 
 
-def execute_instruction():
+def execute_instruction(pht):
     global program_counter
     if ID_EX:
         operation = ID_EX.get("operation")
@@ -86,9 +88,34 @@ def execute_instruction():
             print(f"sw: Armazenando em endereço {memory_address}")
 
         elif operation == "beq":
-            if registers[destination_register] == registers[source_register_1]:
+            if program_counter > int(source_register_2):
+                variable = program_counter - source_register_2
+                branch_address = program_counter - variable - 1
+                print("MENOR",branch_address)
+                print("PC",program_counter)
+                print("SR",source_register_2)
+            else:
+                branch_address = source_register_2 - 1
+                print("MAIOR",branch_address)
+
+            will_branch = registers[destination_register] == registers[source_register_1]
+            if pht and will_branch:
+                EX_MEM["branch_taken"] = True
+                print(f"Branch taken to {branch_address}")
+                update_prediction_table(branch_address, True)
+                program_counter = branch_address
+                IF_ID.clear()
+                ID_EX.clear()
+                
+            elif pht and (not will_branch):
+                EX_MEM["branch_taken"] = False
+                print("Branch not taken")
+                update_prediction_table(branch_address, False)
+
+            if will_branch and (not pht):
                 program_counter = int(source_register_2) - 1
                 print(f"beq: Salto para PC {program_counter} devido à igualdade.")
+
         elif operation == "noop":
             print("noop: Nenhuma operação.")
             pass
@@ -96,6 +123,16 @@ def execute_instruction():
             print("Execução interrompida.")
             global halt_flag
             halt_flag = True
+
+def update_prediction_table(branch_address, taken):
+    if branch_address not in prediction_table:
+        prediction_table[branch_address] = 0 
+    if taken:
+        prediction_table[branch_address] += 1
+    else:
+        prediction_table[branch_address] -= 1
+
+    prediction_table[branch_address] = max(0, min(prediction_table[branch_address], 3))
 
 def decode_instruction():
     if IF_ID:
@@ -131,7 +168,7 @@ def parse_instruction(instruction):
 def print_register_status():
     print('Banco de Registradores:', registers)
 
-def pipeline():
+def pipeline(pht):
     global program_memory, halt_flag
     with open('programa.txt', 'r') as file:
         program_memory = [line.strip() for line in file]
@@ -143,9 +180,9 @@ def pipeline():
         input("Pressione Enter para próximo ciclo:\n")
         write_back()
         memory_access()
-        execute_instruction()
+        execute_instruction(pht)
         decode_instruction()
         fetch_instruction() 
         print_register_status()
 
-pipeline()
+pipeline(False)
