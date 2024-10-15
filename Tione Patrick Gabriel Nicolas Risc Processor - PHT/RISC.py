@@ -1,3 +1,6 @@
+executed_instructions = 0
+total_instructions = 0
+
 program_memory = []
 data_memory = [0] * 1024
 registers = [0] * 32
@@ -51,6 +54,7 @@ def memory_access():
 
 
 def execute_instruction(pht):
+    global executed_instructions
     global program_counter
     if ID_EX:
         operation = ID_EX.get("operation")
@@ -64,6 +68,7 @@ def execute_instruction(pht):
             EX_MEM["operation"] = "add"
             EX_MEM["destination_register"] = destination_register
             EX_MEM["execution_result"] = result
+            executed_instructions += 1
             print(f"Resultado de add: {result}")
 
         elif operation == "sub":
@@ -71,6 +76,7 @@ def execute_instruction(pht):
             EX_MEM["operation"] = "sub"
             EX_MEM["destination_register"] = destination_register
             EX_MEM["execution_result"] = result
+            executed_instructions += 1
             print(f"Resultado de sub: {result}")
 
         elif operation == "lw":
@@ -78,6 +84,7 @@ def execute_instruction(pht):
             EX_MEM["operation"] = "lw"
             EX_MEM["destination_register"] = destination_register
             EX_MEM["memory_address"] = memory_address
+            executed_instructions += 1
             print(f"lw: Carregando de endereço {memory_address}")
 
         elif operation == "sw":
@@ -85,25 +92,25 @@ def execute_instruction(pht):
             EX_MEM["operation"] = "sw"
             EX_MEM["destination_register"] = destination_register
             EX_MEM["memory_address"] = memory_address
+            executed_instructions += 1
             print(f"sw: Armazenando em endereço {memory_address}")
 
         elif operation == "beq":
             if program_counter > int(source_register_2):
                 variable = program_counter - source_register_2
                 branch_address = program_counter - variable - 1
-                print("MENOR",branch_address)
-                print("PC",program_counter)
-                print("SR",source_register_2)
+
             else:
                 branch_address = source_register_2 - 1
-                print("MAIOR",branch_address)
 
             will_branch = registers[destination_register] == registers[source_register_1]
+
             if pht and will_branch:
                 EX_MEM["branch_taken"] = True
                 print(f"Branch taken to {branch_address}")
                 update_prediction_table(branch_address, True)
                 program_counter = branch_address
+                executed_instructions += 1
                 IF_ID.clear()
                 ID_EX.clear()
                 
@@ -111,16 +118,20 @@ def execute_instruction(pht):
                 EX_MEM["branch_taken"] = False
                 print("Branch not taken")
                 update_prediction_table(branch_address, False)
+                executed_instructions += 1
 
             if will_branch and (not pht):
                 program_counter = int(source_register_2) - 1
+                executed_instructions += 1
                 print(f"beq: Salto para PC {program_counter} devido à igualdade.")
 
         elif operation == "noop":
             print("noop: Nenhuma operação.")
+            executed_instructions += 1
             pass
         elif operation == "halt":
             print("Execução interrompida.")
+            executed_instructions += 1
             global halt_flag
             halt_flag = True
 
@@ -155,11 +166,13 @@ def decode_instruction():
                 ID_EX["operation"] = operation
 
 def fetch_instruction():
+    global total_instructions
     global program_counter
     if program_counter < len(program_memory):
         fetched_instruction = program_memory[program_counter]
         IF_ID["fetched_instruction"] = fetched_instruction
         print(f"Fetch: Buscando instrução: {fetched_instruction}")
+        total_instructions += 1
         program_counter += 1
     
 def parse_instruction(instruction):
@@ -170,7 +183,7 @@ def print_register_status():
 
 def pipeline(pht):
     global program_memory, halt_flag
-    with open('Risc Processor\programa.txt', 'r') as file:
+    with open('programa.txt', 'r') as file:
         program_memory = [line.strip() for line in file]
 
     initialize_data_memory()
@@ -185,4 +198,8 @@ def pipeline(pht):
         fetch_instruction() 
         print_register_status()
 
-pipeline(False)
+pipeline(True)
+
+print("Instruções Totais", total_instructions)
+print("Instruções Executadas", executed_instructions)
+print("Instruções Inválidas", total_instructions - executed_instructions)
