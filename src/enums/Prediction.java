@@ -2,5 +2,5 @@ package enums;
 
 public enum Prediction {
     DEFAULT,
-    PHT
+    G_SHARE
 }
